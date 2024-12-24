@@ -19,22 +19,31 @@ Replace `'2024-12-01'` with the desired date to get the total revenue for that d
 
 ---
 
-## Query 2: Total Quantity Sold for a Specific Month
+## Query 2: Monthly Top-Selling Products
 
 ```sql
 SELECT
-    SUM(od.quantity) AS total_quantity_sold
+    p.name AS product_name,
+    SUM(od.quantity) AS total_quantity_sold,
 FROM
     order_details od
 JOIN
+    product p ON od.product_id = p.product_id
+JOIN
     "order" o ON od.order_id = o.order_id
 WHERE
-    DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', '2024-12-01'::DATE) -- Replace with the desired month
+    DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', '2024-12-01'::DATE) -- Replace with the specific date
+GROUP BY
+    p.product_id, p.name
+ORDER BY
+    total_quantity_sold DESC
+LIMIT 10
+
 ```
 
 ### Description:
 
-This query calculates the total quantity of items sold during a specific month.
+This query returns a list of top-selling products in a specific month.
 
 ### Usage:
 
