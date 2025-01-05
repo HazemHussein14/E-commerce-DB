@@ -10,7 +10,9 @@
   - [Customer Table](#customer-table)
   - [Order Table](#order-table)
   - [Order Details Table](#order-details-table)
+  - [Sales History](./sales-history.md)
 - [Insert Sample Data](#insert-sample-data)
+- [Denormalized Categories](./denormalized-categories.md)
 - [Commonly Used Queries](#insert-sample-data)
 - [Notes](#notes)
 
