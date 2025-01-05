@@ -80,3 +80,75 @@ This query identifies customers who spent more than $500 in the previous month.
 Run the query as-is to get results for the previous month relative to the current date.
 
 ---
+
+## Query 4: Search for Products by Keyword
+
+```sql
+SELECT
+    product_id,
+    name
+FROM
+    product
+WHERE
+    name ILIKE '%camera%' OR description ILIKE '%camera%' -- Replace 'camera' with the desired keyword
+```
+
+### Description:
+
+This query retrieves all products that contain a specific keyword in their name or description. The keyword search is case-insensitive.
+
+### Usage:
+
+Replace `%camera%` with `%<your_keyword>%` to search for products based on a specific term.
+
+---
+
+## Query 5: Recommend Products from the Same Category Excluding Purchased Products
+
+### Query with Joins
+
+```sql
+SELECT
+    p.id,
+    p.name,
+    p.category_id
+FROM
+    product p
+WHERE
+    p.category_id = 5 -- Replace with the desired category ID
+    AND NOT EXISTS (
+        SELECT 1
+        FROM "order" o
+        INNER JOIN order_details od ON o.id = od.order_id
+        INNER JOIN product purchased ON od.product_id = purchased.id
+        WHERE o.customer_id = 100 -- Replace with the current customer ID
+          AND purchased.id = p.id
+    )
+```
+
+### Query Using Our Denormalized Sales History Table
+
+```sql
+SELECT
+    p.id,
+    p.name,
+    p.category_id
+FROM
+    product p
+WHERE
+    p.category_id = 5 -- Replace with the desired category ID
+    AND NOT EXISTS (
+        SELECT 1
+        FROM sales_history sh
+        WHERE sh.customer_id = 100 -- Replace with the current customer ID
+          AND sh.product_id = p.id
+    )
+```
+
+### Description:
+
+This query recommends products from the same category that the customer has not purchased before. It can be achieved either by using joins or a denormalized [sales_history](./sales-history.md) table for better performance.
+
+### Usage:
+
+Replace `5` with the desired category ID and `100` with the current customer ID to fetch recommendations.
