@@ -66,7 +66,7 @@ CREATE TABLE sales_history (
 
 ## Data Insertion Logic
 
-To populate the `Sales History` table, you can use the following query, which joins data from the relevant normalized tables:
+To populate the `Sales History` table, you can use the following query, which joins data from the relevant normalized tables (assuming we don't have a huge amount of data in our normalized tables):
 
 ```sql
 INSERT INTO sales_history (
