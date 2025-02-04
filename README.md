@@ -153,13 +153,13 @@ You can find the queries here: [SQL Queries](./queries.md) file.
 
 ### Included Queries:
 
-1. Query 1: Total Revenue for a Specific Date
-2. Query 2: Monthly Top-Selling Products
-3. Query 3: High-Value Customers for the Previous Month
-4. Query 4: Search for Products by Keyword
-5. Query 5: Recommend Products from the Same Category
-6. Query 6: Products per Category
-7. Query 7: Top Customers by Spending
-8. Query 8: Recent Orders with Customer Information
-9. Query 9: Low Stock Products
-10. Query 10: Category Revenue
+1. Total Revenue for a Specific Date
+2. Monthly Top-Selling Products
+3. High-Value Customers for the Previous Month
+4. Search for Products by Keyword
+5. Recommend Products from the Same Category
+6. Products per Category
+7. Top Customers by Spending
+8. Recent Orders with Customer Information
+9. Low Stock Products
+10. Category Revenue
