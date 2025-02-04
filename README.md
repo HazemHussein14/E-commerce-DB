@@ -11,9 +11,7 @@
   - [Order Table](#order-table)
   - [Order Details Table](#order-details-table)
   - [Sales History](./sales-history.md)
-- [Insert Sample Data](#insert-sample-data)
 - [Denormalized Categories](./denormalized-categories.md)
-- [Commonly Used Queries](#insert-sample-data)
 - [Notes](#notes)
 
 ---
@@ -34,7 +32,7 @@ The database schema is designed to reflect relationships between key entities in
 
 ## Database Schema and Setup
 
-This section explains each table in the database and how to create it. Follow the provided SQL queries to set up the schema.
+This section explains each table in the database and how to create it. Follow the provided [link](./setup.md) to set up your database and fill it with mock data.
 
 ---
 
@@ -147,15 +145,6 @@ CREATE TABLE order_details (
 
 ---
 
-## Insert Sample Data
-
-The sample data insertion queries have been moved to a separate file for clarity and organization.
-
-You can find the sample data script here:  
-➡️ [Sample Data Insertion Script](./sample-data.md)
-
----
-
 ## SQL Queries
 
 Commonly used SQL queries in a separate file for ease of reference. These queries include reports and data analysis for the e-commerce database.
@@ -164,22 +153,13 @@ You can find the queries here: [SQL Queries](./queries.md) file.
 
 ### Included Queries:
 
-- Daily Revenue Report
-- Monthly Top-Selling Products
-- High-Spending Customers Report
-
-## Notes
-
-- The database schema enforces data integrity using primary and foreign keys.
-- Sample data demonstrates relationships between tables and prepares the schema for queries or integration.
-- Use `SERIAL` for auto-incrementing primary keys.
-
----
-
-### Additional Files
-
-- [ER Diagram](./ecommerce-ERD.drawio.png)
-- [Sample Data Script](./sample-data.md)
-- [Commonly used Queries](./queries.md)
-
----
+1. Query 1: Total Revenue for a Specific Date
+2. Query 2: Monthly Top-Selling Products
+3. Query 3: High-Value Customers for the Previous Month
+4. Query 4: Search for Products by Keyword
+5. Query 5: Recommend Products from the Same Category
+6. Query 6: Products per Category
+7. Query 7: Top Customers by Spending
+8. Query 8: Recent Orders with Customer Information
+9. Query 9: Low Stock Products
+10. Query 10: Category Revenue
