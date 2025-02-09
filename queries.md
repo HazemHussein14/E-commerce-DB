@@ -13,6 +13,11 @@
 9. [Query 9: Low Stock Products](#query-9-low-stock-products)
 10. [Query 10: Category Revenue](#query-10-category-revenue)
 11. [Performance Optimizations](#performance-optimizations)
+    - [Total Revenue for a Specific Date](#total-revenue-for-a-specific-date-optimization)
+    - [Top Selling Products Optimization](#top-selling-products-optimization)
+    - [Monthly High-Spending Customers Optimization](#monthly-high-spending-customers-optimization)
+    - [Product Search Optimization](#product-search-optimization)
+    - [Personalized Product Recommendations Optimization](#personalized-product-recommendations-optimization)
     - [Products per Category Optimization](#products-per-category-optimization)
     - [Top Customers Optimization](#top-customers-optimization)
     - [Recent Orders Optimization](#recent-orders-optimization)
@@ -53,7 +58,7 @@ JOIN
 JOIN
     "order" o ON od.order_id = o.order_id
 WHERE
-    DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', '2024-12-01'::DATE) -- Replace with the specific date
+    DATE_TRUNC('month', o.order_date) =  '2024-12-01' -- Replace with the specific date
 GROUP BY
     p.product_id, p.name
 ORDER BY
@@ -124,46 +129,91 @@ Replace `%camera%` with `%<your_keyword>%` to search for products based on a spe
 
 ---
 
-## Query 5: Recommend Products from the Same Category Excluding Purchased Products
+## Query 5: Recommend Products from the Same Category and Author Excluding Purchased Products
 
 ### Query with Joins
 
 ```sql
 SELECT
-    p.id,
+    p.product_id,
     p.name,
-    p.category_id
+    p.author,
+    p.description,
+    p.price,
+    p.stock_quantity
 FROM
     product p
+JOIN
+    category c ON p.category_id = c.category_id
 WHERE
-    p.category_id = 5 -- Replace with the desired category ID
-    AND NOT EXISTS (
-        SELECT 1
-        FROM "order" o
-        INNER JOIN order_details od ON o.id = od.order_id
-        INNER JOIN product purchased ON od.product_id = purchased.id
-        WHERE o.customer_id = 100 -- Replace with the current customer ID
-          AND purchased.id = p.id
+    p.category_id IN (
+        SELECT
+            p2.category_id
+        FROM
+            product p2
+        JOIN
+            order_details od ON p2.product_id = od.product_id
+        JOIN
+            order o ON od.order_id = o.order_id
+        WHERE
+            o.customer_id = ? -- Replace with the specific customer ID
     )
+    AND p.author IN (
+        SELECT
+            p2.author
+        FROM
+            product p2
+        JOIN
+            order_details od ON p2.product_id = od.product_id
+        JOIN
+            order o ON od.order_id = o.order_id
+        WHERE
+            o.customer_id = ? -- Replace with the specific customer ID
+    )
+    AND p.product_id NOT IN (
+        SELECT
+            od.product_id
+        FROM
+            order_details od
+        JOIN
+            order o ON od.order_id = o.order_id
+        WHERE
+            o.customer_id = ? -- Replace with the specific customer ID
+    );
 ```
 
 ### Query Using Our Denormalized Sales History Table
 
 ```sql
 SELECT
-    p.id,
+    p.product_id,
     p.name,
     p.category_id
 FROM
     product p
-WHERE
-    p.category_id = 5 -- Replace with the desired category ID
-    AND NOT EXISTS (
-        SELECT 1
+WHERE p.category_id IN (
+    SELECT category_id
+    FROM product
+    WHERE product_id IN (
+        SELECT product_id
         FROM sales_history sh
-        WHERE sh.customer_id = 100 -- Replace with the current customer ID
-          AND sh.product_id = p.id
+        WHERE customer_id = 20
     )
+)
+AND p.author IN (
+    SELECT author
+    FROM product
+    WHERE product_id IN (
+        SELECT product_id
+        FROM sales_history sh
+        WHERE customer_id = 20
+    )
+)
+AND p.product_id NOT IN (
+    SELECT product_id
+    FROM sales_history sh
+    WHERE customer_id = 20
+);
 ```
 
 ### Description:
@@ -313,15 +363,317 @@ Run the query to analyze revenue performance by category.
 
 ### Summary Table
 
-| Query Description                | Original Execution Time | Optimization Technique             | Optimized Execution Time | Link to Details                                     |
-| -------------------------------- | ----------------------- | ---------------------------------- | ------------------------ | --------------------------------------------------- |
-| Products per Category            | 38.293 ms               | Aggregate before join              | 12.745 ms                | [View Details](#products-per-category-optimization) |
-| Top Customers by Spending        | 1886.650 ms             | Materialized view + covering index | 164.752 ms               | [View Details](#top-customers-optimization)         |
-| Recent Orders with Customer Info | 951.314 ms              | CTE for initial limiting           | 166.806 ms               | [View Details](#recent-orders-optimization)         |
-| Low Stock Products               | 19.694 ms               | Expression index                   | 0.759 ms                 | [View Details](#low-stock-optimization)             |
-| Category Revenue                 | 4170.749 ms             | Materialized view                  | 0.025 ms                 | [View Details](#category-revenue-optimization)      |
+| Query Description                    | Original Execution Time | Optimization Technique                | Optimized Execution Time | Link to Details                                                    |
+| ------------------------------------ | ----------------------- | ------------------------------------- | ------------------------ | ------------------------------------------------------------------ |
+| Total Revenue for a Specific Date    | 130.877 ms              | Index on DATE(order_date)             | 2.685 ms                 | [View Details](#total-revenue-for-a-specific-date-optimization)    |
+| Top Selling Products                 | 1908.878 ms             | Covering index + range date filter    | 691.440 ms               | [View Details](#top-selling-products-optimization)                 |
+| Monthly High-Spending Customers      | 1008.952 ms             | Index on order_date + range filtering | 129.400 ms               | [View Details](#monthly-high-spending-customers-optimization)      |
+| Product Search Optimization          | 1116.505 ms             | Full-text search with GIN index       | 2.423 ms                 | [View Details](#product-search-optimization)                       |
+| Personalized Product Recommendations | 2784.692 ms             | Covering index                        | 7.355 ms                 | [View Details](#personalized-product-recommendations-optimization) |
+| Products per Category                | 38.293 ms               | Aggregate before join                 | 12.745 ms                | [View Details](#products-per-category-optimization)                |
+| Top Customers by Spending            | 1886.650 ms             | Materialized view + covering index    | 164.752 ms               | [View Details](#top-customers-optimization)                        |
+| Recent Orders with Customer Info     | 951.314 ms              | CTE for initial limiting              | 166.806 ms               | [View Details](#recent-orders-optimization)                        |
+| Low Stock Products                   | 19.694 ms               | Expression index                      | 0.759 ms                 | [View Details](#low-stock-optimization)                            |
+| Category Revenue                     | 4170.749 ms             | Materialized view                     | 0.025 ms                 | [View Details](#category-revenue-optimization)                     |
 
 ### Detailed Optimizations
+
+---
+
+#### Total Revenue for a Specific Date Optimization
+
+**Problem:**
+
+- The original query performs a full table scan to filter orders by date.
+- No index on the `order_date` column for date-specific filtering.
+
+**Solution Steps:**
+
+1. Create an index on the expression `DATE(order_date)`:
+
+```sql
+CREATE INDEX idx_order_date ON "order" ((DATE(order_date)));
+```
+
+2. Optimized query:
+
+```sql
+SELECT
+    SUM(total_amount) AS total_revenue
+FROM
+    "order"
+WHERE
+    DATE(order_date) = '2024-12-01'; -- Replace with the specific date
+```
+
+**Why It's Faster:**
+
+- The index allows PostgreSQL to quickly locate rows matching the specific date.
+- Reduces the number of rows scanned during query execution.
+
+**Execution Time:**
+
+- Before Optimization: 130.877 ms
+- After Optimization: 2.685 ms
+
+---
+
+#### Top Selling Products Optimization
+
+**Problem:**
+
+- The original query uses `DATE_TRUNC` for filtering, which is computationally expensive.
+- Joins and aggregations are performed on a large dataset.
+
+**Solution Steps:**
+
+1. Replace `DATE_TRUNC` with a range filter:
+
+```sql
+WHERE
+    o.order_date >= '2024-12-01'
+    AND o.order_date < '2025-01-01'
+```
+
+2. Create a covering index for `order_details`:
+
+```sql
+CREATE INDEX idx_orderdetails_covering ON order_details(order_id, product_id, quantity);
+```
+
+3. Optimized query:
+
+```sql
+SELECT
+    od.product_id,
+    SUM(od.quantity) AS total_quantity_sold
+FROM
+    order_details od
+JOIN
+    "order" o ON od.order_id = o.order_id
+WHERE
+    o.order_date >= '2024-12-01'
+    AND o.order_date < '2025-01-01'
+GROUP BY
+    od.product_id
+ORDER BY
+    total_quantity_sold DESC
+LIMIT 10;
+```
+
+**Why It's Faster:**
+
+- Range filtering is more efficient than `DATE_TRUNC`.
+- The covering index reduces the need for additional table lookups.
+
+**Execution Time:**
+
+- Before Optimization: 1908.878 ms
+- After Optimization: 691.440 ms
+
+---
+
+#### Monthly High-Spending Customers Optimization
+
+**Problem:**
+
+- The original query uses `DATE_TRUNC` and joins the `customer` table unnecessarily.
+- No index on `order_date` for efficient filtering.
+
+**Solution Steps:**
+
+1. Create an index on `order_date`:
+
+```sql
+CREATE INDEX idx_order_date ON "order"(order_date);
+```
+
+2. Optimize the query to use range filtering and remove unnecessary joins:
+
+```sql
+SELECT
+    customer_id,
+    SUM(total_amount) AS total_amount
+FROM
+    "order"
+WHERE
+    order_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 month'
+    AND order_date < DATE_TRUNC('month', CURRENT_DATE)
+GROUP BY
+    customer_id
+HAVING
+    SUM(total_amount) > 500;
+```
+
+**Why It's Faster:**
+
+- Range filtering is more efficient than `DATE_TRUNC`.
+- Removing unnecessary joins reduces query complexity.
+
+**Execution Time:**
+
+- Before Optimization: 1008.952 ms
+- After Optimization: 129.400 ms
+
+---
+
+#### Product Search Optimization
+
+**Problem:**
+
+- The original query uses `ILIKE`, which performs a full table scan and is case-insensitive.
+- No index support for `ILIKE` with wildcard patterns.
+
+**Solution Steps:**
+
+1. Add a `tsvector` column for full-text search:
+
+```sql
+ALTER TABLE product ADD COLUMN search_text_vector tsvector;
+```
+
+2. Populate the `tsvector` column:
+
+```sql
+UPDATE product
+SET search_text_vector = to_tsvector('english', name || ' ' || COALESCE(description, ''));
+```
+
+3. Create a GIN index for fast searching:
+
+```sql
+CREATE INDEX idx_product_search ON product USING gin(search_text_vector);
+```
+
+4. Optimized query:
+
+```sql
+SELECT
+    product_id,
+    name,
+    description
+FROM
+    product
+WHERE
+    search_text_vector @@ plainto_tsquery('camera');
+```
+
+**Why It's Faster:**
+
+- Full-text search is optimized for pattern matching.
+- The GIN index allows for fast lookups.
+
+**Execution Time:**
+
+- Before Optimization: 1116.505 ms
+- After Optimization: 2.423 ms
+
+---
+
+#### Personalized Product Recommendations Optimization
+
+**Problem:**
+
+- The original query uses multiple subqueries with `IN` clauses, which are inefficient.
+- No covering index for the `sales_history` table.
+
+**Solution Steps:**
+
+1. Create a covering index for `sales_history`:
+
+```sql
+CREATE INDEX idx_covering_fkeys ON sales_history(customer_id, product_id);
+```
+
+2. Use the same query:
+
+```sql
+SELECT
+    p.product_id,
+    p.name,
+    p.category_id
+FROM
+    product p
+WHERE p.category_id IN (
+    SELECT category_id
+    FROM product
+    WHERE product_id IN (
+        SELECT product_id
+        FROM sales_history sh
+        WHERE customer_id = 20
+    )
+)
+AND p.author IN (
+    SELECT author
+    FROM product
+    WHERE product_id IN (
+        SELECT product_id
+        FROM sales_history sh
+        WHERE customer_id = 20
+    )
+)
+AND p.product_id NOT IN (
+    SELECT product_id
+    FROM sales_history sh
+    WHERE customer_id = 20
+);
+```
+
+**Why It's Faster:**
+
+- The covering index reduces the need for additional table lookups.
+
+**Execution Time:**
+
+- Before Optimization: 2784.692 ms
+- After Optimization: 7.355 ms
+
+**Another Solution Using CTE**
+
+1. Create a covering index for `sales_history`:
+2. Create a covering index for `product`
+
+```sql
+CREATE INDEX idx_sales_covering ON sales_history(customer_id, product_id);
+CREATE INDEX idx_product_covering ON sales_history(category_id, author);
+```
+
+3. Use CTE instead of repeating sub-queries
+4. Use `EXISTS` instead of `IN`
+
+```sql
+WITH customer_products AS (
+    SELECT p.product_id, p.category_id, p.author
+    FROM product p
+    WHERE EXISTS (
+        SELECT 1
+        FROM sales_history sh
+        WHERE sh.customer_id = 20 AND sh.product_id = p.product_id
+    )
+)
+SELECT p.product_id, p.name, p.category_id
+FROM product p
+WHERE p.category_id IN (SELECT category_id FROM customer_products)
+AND p.author IN (SELECT author FROM customer_products)
+AND NOT EXISTS (
+    SELECT 1
+    FROM sales_history sh
+    WHERE sh.customer_id = 20 AND sh.product_id = p.product_id
+);
+```
+
+**Benefits of this approach:**
+
+- The covering indexes reduces the need for additional table lookups.
+- The CTE simplifies the query and increase readability maintainability
+- Using `EXISTS` stop searching as soon as it find a match
+
+**Execution Time:**
+
+- Before Optimization: 2784.692 ms
+- After Optimization: 25.050 ms
+
+---
 
 #### Products per Category Optimization
 
@@ -363,6 +715,8 @@ INNER JOIN (
 - Reduces the number of rows being joined
 - Uses index for efficient category lookups
 - Aggregates data before joining, minimizing the data processed
+
+---
 
 #### Top Customers Optimization
 
@@ -415,6 +769,8 @@ LIMIT 10;
 REFRESH MATERIALIZED VIEW customer_total_spending;
 ```
 
+---
+
 #### Recent Orders Optimization
 
 **Problem:**
@@ -463,6 +819,8 @@ ORDER BY
 - Uses index for efficient sorting
 - Minimizes memory usage for sorting operation
 
+---
+
 #### Low Stock Optimization
 
 **Problem:**
@@ -496,6 +854,8 @@ WHERE
 - Partial index only stores relevant rows
 - Quick access to low stock products
 - Smaller index size compared to full column index
+
+---
 
 #### Category Revenue Optimization
 
