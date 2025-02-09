@@ -99,6 +99,52 @@ JOIN
 
 ---
 
-## Note
+## Triggers for Automatic Updates
 
-We will create a trigger to automatically update the Sales History table whenever changes occur in the source tables. This will ensure the denormalized data remains accurate and up-to-date.
+To ensure the `Sales History` table remains **up-to-date**, we use triggers that automatically insert data into `sales_history` when a new order is placed.
+
+### **Trigger Function**
+
+```sql
+CREATE OR REPLACE FUNCTION update_sales_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO sales_history (
+        order_id, customer_id, customer_name, email, order_date,
+        category_name, product_id, product_name, quantity, unit_price, total_amount
+    )
+    SELECT
+        NEW.order_id,
+        c.customer_id,
+        CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
+        c.email,
+        NEW.order_date,
+        cat.category_name,
+        p.product_id,
+        p.name AS product_name,
+        od.quantity,
+        od.unit_price,
+        (od.quantity * od.unit_price) AS total_amount
+    FROM
+        customer c
+    JOIN
+        order_details od ON NEW.order_id = od.order_id
+    JOIN
+        product p ON od.product_id = p.product_id
+    JOIN
+        category cat ON p.category_id = cat.category_id
+    WHERE c.customer_id = NEW.customer_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### **Trigger Creation**
+
+```sql
+CREATE TRIGGER trigger_sales_history
+AFTER INSERT ON "order"
+FOR EACH ROW
+EXECUTE FUNCTION update_sales_history();
+```
