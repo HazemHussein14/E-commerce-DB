@@ -39,10 +39,10 @@ Below is an overview of the database tables and their **current row counts**:
 
 | Table Name      | Number of Rows |
 | --------------- | -------------- |
-| `categories`    | 1,000,000      |
+| `customers`     | 1,000,000      |
 | `products`      | 100,000        |
-| `customers`     | 2,000,000      |
-| `orders`        | 12,850         |
+| `categories`    | 160            |
+| `orders`        | 2,000,000      |
 | `order_details` | 8,998,652      |
 | `sales_history` | 8,998,652      |
 
